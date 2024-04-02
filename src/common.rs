@@ -1,78 +1,9 @@
-use bevy::{
-    prelude::*,
-    ui::{FocusPolicy, UiPassNode},
-};
+use bevy::prelude::*;
 
-#[derive(Resource, Debug, Default)]
-pub struct BackgroundAsset {
-    pub background: Handle<Image>,
-}
-
-#[derive(Component)]
-pub struct Background;
-
-pub struct BackgroundPlugin;
-
-impl Plugin for BackgroundPlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<BackgroundAsset>()
-            .add_systems(Startup, setup_background)
-            .add_systems(Update, draw_background);
-    }
-}
-
-fn setup_background(
-    mut background_asset: ResMut<BackgroundAsset>,
-    settings_asset: Res<SettingsAsset>,
-    asset_server: Res<AssetServer>,
-) {
-    *background_asset = BackgroundAsset {
-        background: asset_server.load(settings_asset.background_path.clone()),
-    };
-}
-
-fn draw_background(mut commands: Commands, background_asset: Res<BackgroundAsset>) {
-    commands
-        .spawn((NodeBundle {
-            style: Style {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                ..default()
-            },
-            ..default()
-        },))
-        .with_children(|parent| {
-            parent.spawn((
-                ImageBundle {
-                    image: background_asset.background.clone().into(),
-                    ..default()
-                },
-                Background,
-            ));
-        });
-}
-
-#[derive(Resource, Debug, Default)]
-pub struct SettingsAsset {
-    // others
-    // specify background image path
-    // if empty, use default background color
-    // if use relative path, it is relative to the assets/ directory
-    pub background_path: String,
-    // if true and background_path is valid, use specified background image
-    pub enable_background_image: bool,
-}
-
-pub struct SettingsPlugin;
-
-impl Plugin for SettingsPlugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(SettingsAsset {
-            background_path: "textures/background.png".to_string(),
-            enable_background_image: true,
-        });
-    }
-}
+pub const BACK: i32 = -1;
+pub const MIDDLE: i32 = 0;
+pub const FRONT: i32 = 1;
+pub const BACKGROUND_TRANSPARENT: f32 = 0.3;
 
 #[derive(States, Default, Debug, Clone, Eq, PartialEq, Hash)]
 pub enum GameState {
@@ -81,4 +12,21 @@ pub enum GameState {
     Playing,
     Setting,
     GameOver,
+}
+
+pub fn despawn_entities_system<T: Component>(
+    mut commands: Commands,
+    query: Query<Entity, With<T>>,
+) {
+    for entity in query.iter() {
+        if let Some(entity_commands) = commands.get_entity(entity) {
+            entity_commands.despawn_recursive();
+            info!("Despawned {:?}", std::any::type_name::<T>());
+        } else {
+            warn!(
+                "Failed to despawn {:?}, entity not found",
+                std::any::type_name::<T>()
+            );
+        }
+    }
 }
