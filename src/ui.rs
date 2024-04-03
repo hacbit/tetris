@@ -29,6 +29,7 @@ fn setup_background(mut commands: Commands, settings_assets: Res<SettingsAsset>)
     ));
 }
 
+// test function
 fn update_background(
     mut background_query: Query<&mut Sprite, With<Background>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -65,7 +66,7 @@ impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreStartup, setup_settings_system)
             .add_systems(Update, pause_or_continue_system)
-            .add_systems(OnEnter(GameState::Setting), display_settings_menu_system)
+            .add_systems(OnEnter(GameState::Setting), spawn_settings_menu_system)
             .add_systems(
                 OnExit(GameState::Setting),
                 despawn_entities_system::<SettingsMenuComponent>,
@@ -101,7 +102,7 @@ fn pause_or_continue_system(
     }
 }
 
-fn display_settings_menu_system(mut commands: Commands, settings_assets: Res<SettingsAsset>) {
+fn spawn_settings_menu_system(mut commands: Commands, settings_assets: Res<SettingsAsset>) {
     commands
         .spawn((
             SettingsMenuComponent,
@@ -140,8 +141,8 @@ pub struct StartMenuPlugin;
 
 impl Plugin for StartMenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, display_start_menu_system)
-            .add_systems(OnEnter(GameState::StartMenu), display_start_menu_system)
+        app//.add_systems(Startup, spawn_start_menu_system)
+            .add_systems(OnEnter(GameState::StartMenu), spawn_start_menu_system)
             .add_systems(
                 OnExit(GameState::StartMenu),
                 despawn_entities_system::<StartMenuComponent>,
@@ -153,7 +154,14 @@ impl Plugin for StartMenuPlugin {
     }
 }
 
-fn display_start_menu_system(
+#[derive(Component)]
+pub enum StartMenuButtonComponent {
+    Play,
+    Settings,
+    Quit,
+}
+
+fn spawn_start_menu_system(
     mut commands: Commands,
     start_menu_query: Query<Entity, With<StartMenuComponent>>,
     settings_assets: Res<SettingsAsset>,
@@ -199,27 +207,94 @@ fn display_start_menu_system(
                     ..default()
                 });
                 parent
-                    .spawn(ButtonBundle {
-                        style: Style {
-                            width: Val::Px(150.0),
-                            height: Val::Px(65.0),
-                            border: UiRect::all(Val::Px(3.0)),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
+                    .spawn((
+                        StartMenuButtonComponent::Play,
+                        ButtonBundle {
+                            style: Style {
+                                width: Val::Px(150.0),
+                                height: Val::Px(65.0),
+                                border: UiRect::all(Val::Px(3.0)),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            transform: Transform::from_translation(Vec3::new(
+                                -100.0,
+                                0.0,
+                                MIDDLE as f32,
+                            )),
+                            border_color: BorderColor(Color::WHITE),
+                            background_color: Color::rgb(0.15, 0.15, 0.15).into(),
                             ..default()
                         },
-                        transform: Transform::from_translation(Vec3::new(
-                            0.0,
-                            -100.0,
-                            MIDDLE as f32,
-                        )),
-                        border_color: BorderColor(Color::WHITE),
-                        background_color: Color::rgb(0.15, 0.15, 0.15).into(),
-                        ..default()
-                    })
+                    ))
                     .with_children(|parent| {
                         parent.spawn(TextBundle::from_section(
                             "Play",
+                            TextStyle {
+                                font: settings_assets.font.clone(),
+                                font_size: 40.0,
+                                color: Color::rgb(0.9, 0.5, 0.8),
+                            },
+                        ));
+                    });
+                parent
+                    .spawn((
+                        StartMenuButtonComponent::Settings,
+                        ButtonBundle {
+                            style: Style {
+                                width: Val::Px(150.0),
+                                height: Val::Px(65.0),
+                                border: UiRect::all(Val::Px(3.0)),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            transform: Transform::from_translation(Vec3::new(
+                                -300.0,
+                                0.0,
+                                MIDDLE as f32,
+                            )),
+                            border_color: BorderColor(Color::WHITE),
+                            background_color: Color::rgb(0.15, 0.15, 0.15).into(),
+                            ..default()
+                        },
+                    ))
+                    .with_children(|parent| {
+                        parent.spawn(TextBundle::from_section(
+                            "Settings",
+                            TextStyle {
+                                font: settings_assets.font.clone(),
+                                font_size: 40.0,
+                                color: Color::rgb(0.9, 0.5, 0.8),
+                            },
+                        ));
+                    });
+                parent
+                    .spawn((
+                        StartMenuButtonComponent::Quit,
+                        ButtonBundle {
+                            style: Style {
+                                width: Val::Px(150.0),
+                                height: Val::Px(65.0),
+                                border: UiRect::all(Val::Px(3.0)),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            transform: Transform::from_translation(Vec3::new(
+                                -500.0,
+                                0.0,
+                                MIDDLE as f32,
+                            )),
+                            border_color: BorderColor(Color::WHITE),
+                            background_color: Color::rgb(0.15, 0.15, 0.15).into(),
+                            ..default()
+                        },
+                    ))
+                    .with_children(|parent| {
+                        parent.spawn(TextBundle::from_section(
+                            "Quit",
                             TextStyle {
                                 font: settings_assets.font.clone(),
                                 font_size: 40.0,
@@ -234,13 +309,23 @@ fn display_start_menu_system(
 }
 
 fn game_start_system(
-    interaction_query: Query<&Interaction, With<Button>>,
+    interaction_query: Query<(&Interaction, &StartMenuButtonComponent), With<Button>>,
     mut state: ResMut<State<GameState>>,
 ) {
-    if let Ok(interaction) = interaction_query.get_single() {
+    for (interaction, button) in interaction_query.iter() {
         if *interaction == Interaction::Pressed {
-            info!("Game Start");
-            *state = State::new(GameState::Playing);
+            match button {
+                StartMenuButtonComponent::Play => {
+                    *state = State::new(GameState::Playing);
+                }
+                StartMenuButtonComponent::Settings => {
+                    *state = State::new(GameState::Setting);
+                }
+                StartMenuButtonComponent::Quit => {
+                    info!("Quit");
+                    std::process::exit(0);
+                }
+            }
         }
     }
 }

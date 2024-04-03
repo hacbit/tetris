@@ -7,3 +7,11 @@ edition = "2021"
 
 [dependencies.bevy]
 version = "0.13"
+# comment out the next line when build release
+features = ["dynamic_linking"]
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

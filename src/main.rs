@@ -1,8 +1,10 @@
 mod common;
 mod cube;
+mod map;
 mod ui;
 
 use common::*;
+use map::*;
 use ui::*;
 
 use bevy::prelude::*;
@@ -27,15 +29,18 @@ fn main() {
                 .set(ImagePlugin::default_nearest()),
         )
         .init_resource::<SettingsAsset>()
-        .insert_resource(State::new(GameState::StartMenu))
-        .add_systems(Startup, setup_camera)
+        .init_state::<GameState>()
+        .add_systems(Startup, setup_camera_system)
+        .add_systems(OnEnter(GameState::GameOver), back_to_start_menu_system)
         // initialize settings
         .add_plugins(SettingsPlugin)
         // load background image and draw it
-        .add_plugins((BackgroundPlugin, StartMenuPlugin))
+        // load start menu, handle button click event and switch to other states
+        // draw game map while in Playing state
+        .add_plugins((BackgroundPlugin, StartMenuPlugin, MapPlugin))
         .run();
 }
 
-fn setup_camera(mut commands: Commands) {
+fn setup_camera_system(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 }

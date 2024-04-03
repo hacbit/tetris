@@ -30,3 +30,8 @@ pub fn despawn_entities_system<T: Component>(
         }
     }
 }
+
+pub fn back_to_start_menu_system(mut state: ResMut<State<GameState>>) {
+    *state = State::new(GameState::StartMenu);
+    info!("Game Over and back to Start Menu");
+}
